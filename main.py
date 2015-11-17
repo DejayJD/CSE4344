@@ -4,7 +4,10 @@ from node import Node
 
 PRINT_STEPS = True
 
-def create_network(nodes=9, fixed_capacity=0):
+def create_link(n1, n2, fixed_capacity):
+    return (n1, n2, fixed_capacity if fixed_capacity else random.randint(1, 10))
+
+def create_network(node_count=9, fixed_capacity=0):
     """
     :param nodes: how many nodes in the network
     :param fixed_capacity: should there be a fixed capacity between nodes (int)
@@ -12,13 +15,14 @@ def create_network(nodes=9, fixed_capacity=0):
     """
     network = []
     node_list = []
-    for i in range(nodes):
+    for i in range(node_count):
         node_list.append(Node(i))
     for i in range(len(node_list)):
         for j in range(i+1, len(node_list)):
             # add paths randomly between nodes
-            if (nodes-1) and random.uniform(0, 1) < 1./(nodes-1):
-                network.append((node_list[i], node_list[j], fixed_capacity if fixed_capacity else random.randint(1, 10)))
+            if (node_count-1) and random.uniform(0, 1) < 1./(node_count-1):
+                network.append(create_link(n1, n2, fixed_capacity))
+                #network.append((node_list[i], node_list[j], fixed_capacity if fixed_capacity else random.randint(1, 10)))
 
     # check if any nodes were left out
     for node in node_list:
@@ -26,9 +30,10 @@ def create_network(nodes=9, fixed_capacity=0):
             if node is link[0] or node is link[1]:
                 break
         else:
-            network.append((node, random.choice(list(n for n in node_list if n is not node)), fixed_capacity if fixed_capacity else random.randint(1, 10)))
+            network.append(create_link(node, random.choice(list(n for n in node_list if n is not node)), fixed_capacity))
+           # network.append((node, random.choice(list(n for n in node_list if n is not node)), fixed_capacity if fixed_capacity else random.randint(1, 10)))
     if PRINT_STEPS:
-        print("Created network with "+str(nodes)+" nodes.")
+        print("Created network with "+str(node_count)+" nodes.")
     return node_list, network
 
 
