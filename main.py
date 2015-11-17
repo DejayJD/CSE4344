@@ -10,8 +10,8 @@ def create_network(nodes=9, fixed_capacity=0):
     :param fixed_capacity: should there be a fixed capacity between nodes (int)
     :return: list of Nodes, list of (node1, node2, capacity of link)
     """
-    network = list()
-    node_list = list()
+    network = []
+    node_list = []
     for i in range(nodes):
         node_list.append(Node(i))
     for i in range(len(node_list)):
@@ -92,24 +92,23 @@ def find_or_create_node(name, node_list, names):
             if node.name == name:
                 return node
 
-
+#Network is a list
 def load_from_file(filename):
-    node_list = list()
-    network = list()
+    node_list = []
+    network = []
     names = set()
     with open(filename) as csvfile:
         reader = csv.reader(csvfile)
-        for row in reader:
-            node1 = find_or_create_node(row[0], node_list, names)
-            node2 = find_or_create_node(row[1], node_list, names)
-            network.append((node1, node2, int(row[2])))
+        for n1, n2, weight in reader:
+            node1 = find_or_create_node(n1, node_list, names)
+            node2 = find_or_create_node(n2, node_list, names)
+            network.append((node1, node2, int(weight)))#Add link to network
     return node_list, network
-
 
 def send_packet(src, dest, size):
     src.send_queue.append((dest, size))
 
-
+#Detect if any of the nodes still have packets in their queue
 def network_active(node_list):
     for node in node_list:
         if node.send_queue or node.in_progress:
@@ -117,6 +116,8 @@ def network_active(node_list):
 
 
 def main(filename=""):
+    
+    #Setup simulation
     if filename:
         node_list, network = load_from_file(filename)
     else:
@@ -129,7 +130,8 @@ def main(filename=""):
         (0, node_list[0], node_list[3], 10),
         (0, node_list[0], node_list[4], 10)
     ]
-    
+
+    #Start simulation
     iteration_num = 0#Counter variable
     # MAIN LOOP
     while packets_to_send or network_active(node_list):
@@ -142,9 +144,11 @@ def main(filename=""):
                 packets_to_send.remove(packet)
         for node in node_list:
             node.loop_step()
-        for node in node_list:
-            node.dont_do_yet = list()
+            node.dont_do_yet = []
+#        for node in node_list:
+#            node.dont_do_yet = list()
         iteration_num += 1
+        
     print("Simulation took "+str(iteration_num)+" iterations")
 
 if __name__ == "__main__":

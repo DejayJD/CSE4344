@@ -3,19 +3,22 @@ import csv
 
 PRINT_STEPS = True
 
+#Packets are dictionary's its fields are send_to, destination, amount_left, and packet_size
+
 class Node:
     def __init__(self, name):
-        self.neighbors = dict()  # { other_node -> capacity }
-        self.lookup_table = dict()  # { destination -> (which node this node sends to, total length) }
+        self.neighbors = {}  # { other_node -> capacity }
+        self.lookup_table = {}  # { destination -> (which node this node sends to, total length) }
         self.name = str(name)  # for printing purposes only
-        self.send_queue = list()  # [ (destination, packet_size) ]
-        self.in_progress = list()  # [ {send_to, destination, amount_left, packet_size} ]
-        self.recv_queue = dict()  # { (src, dest) -> cur_amount }
-        self.dont_do_yet = list()  # [ dest ]
+        self.send_queue = []  # [ (destination, packet_size) ] holds tuples
+        self.in_progress = []  # [ {send_to, destination, amount_left, packet_size} ]
+        self.recv_queue = {}  # { (src, dest) -> cur_amount }
+        self.dont_do_yet = []  # [ dest ]
 
     def __repr__(self):
         return "Node " + str(self.name)
 
+    #What is link 0 and link 1?
     def get_adjacent_nodes(self, network):
         for link in network:
             if link[0] is self or link[1] is self:
@@ -24,22 +27,25 @@ class Node:
                 else:  # link[1] is self
                     self.neighbors[link[0]] = link[2]
 
+    #This adds a route to lookup table                
     def add_lookup(self, destination, send_to, path_len):
         self.lookup_table[destination] = (send_to, path_len)
 
     def route_packets(self):
-        for packet in self.send_queue[:]:
-            if packet[0] in self.lookup_table:
+        #Packet here is a tuple
+        for packet_tuple in self.send_queue:
+            destination, packet_size = packet_tuple
+            if destination in self.lookup_table:
                 self.in_progress.append(
                     {
-                        "send_to": self.lookup_table[packet[0]][0],
-                        "destination": packet[0],
-                        "amount_left": packet[1],
-                        "packet_size": packet[1]
+                        "send_to": self.lookup_table[destination][0],
+                        "destination": destination,
+                        "amount_left": packet_size,
+                        "packet_size": packet_size
                     })
             else:
-                print("IMPOSSIBLE TO ROUTE FROM "+str(self)+" TO "+str(packet[0]))
-            self.send_queue.remove(packet)
+                print("IMPOSSIBLE TO ROUTE FROM "+str(self)+" TO "+str(destination))
+            self.send_queue.remove(packet_tuple)
 
     def process_queue(self):
         iteration_capacity = self.neighbors.copy()
@@ -61,7 +67,7 @@ class Node:
                           +" (final dest: "+str(packet["destination"])+", left: "+str(packet["amount_left"])+")")
 
         # remove completed packets from queue
-        for packet in self.in_progress[:]:
+        for packet in self.in_progress:
             if packet["amount_left"] == 0:
                 self.in_progress.remove(packet)
 
