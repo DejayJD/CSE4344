@@ -21,8 +21,7 @@ def create_network(node_count=9, fixed_capacity=0):
         for j in range(i+1, len(node_list)):
             # add paths randomly between nodes
             if (node_count-1) and random.uniform(0, 1) < 1./(node_count-1):
-                network.append(create_link(n1, n2, fixed_capacity))
-                #network.append((node_list[i], node_list[j], fixed_capacity if fixed_capacity else random.randint(1, 10)))
+                network.append(create_link(node_list[i], node_list[j], fixed_capacity))
 
     # check if any nodes were left out
     for node in node_list:
@@ -31,11 +30,16 @@ def create_network(node_count=9, fixed_capacity=0):
                 break
         else:
             network.append(create_link(node, random.choice(list(n for n in node_list if n is not node)), fixed_capacity))
-           # network.append((node, random.choice(list(n for n in node_list if n is not node)), fixed_capacity if fixed_capacity else random.randint(1, 10)))
+
     if PRINT_STEPS:
         print("Created network with "+str(node_count)+" nodes.")
     return node_list, network
 
+def network_to_csv(filename, network):
+    with open(filename, 'w') as out:
+        csv_out = csv.writer(out)
+        for n1, n2, weight in network:
+            csv_out.writerow((n1.name, n2.name, weight))
 
 def calculate_paths(node_list, source):
     """
@@ -71,7 +75,6 @@ def calculate_paths(node_list, source):
 
     return result
 
-
 def set_up_network(node_list, network):
     for node in node_list:
         node.get_adjacent_nodes(network)
@@ -85,7 +88,6 @@ def set_up_network(node_list, network):
             for neighbor, path_len in node.neighbors.items():
                 print(str(node)+" -> "+str(neighbor)+": "+str(path_len))
 
-
 def find_or_create_node(name, node_list, names):
     if name not in names:
         new_node = Node(name)
@@ -97,7 +99,6 @@ def find_or_create_node(name, node_list, names):
             if node.name == name:
                 return node
 
-#Network is a list
 def load_from_file(filename):
     node_list = []
     network = []
@@ -119,9 +120,7 @@ def network_active(node_list):
         if node.send_queue or node.in_progress:
             return True
 
-
 def main(filename=""):
-    
     #Setup simulation
     if filename:
         node_list, network = load_from_file(filename)
@@ -150,8 +149,6 @@ def main(filename=""):
         for node in node_list:
             node.loop_step()
             node.dont_do_yet = []
-#        for node in node_list:
-#            node.dont_do_yet = list()
         iteration_num += 1
         
     print("Simulation took "+str(iteration_num)+" iterations")
