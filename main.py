@@ -83,10 +83,10 @@ def set_up_network(node_list, network):
         for dest, (send_to, path_len) in paths.items():
             if send_to:
                 node.add_lookup(dest, send_to if send_to is not node else dest, path_len)
-    if PRINT_STEPS:
-        for node in node_list:
-            for neighbor, path_len in node.neighbors.items():
-                print(str(node)+" -> "+str(neighbor)+": "+str(path_len))
+#    if PRINT_STEPS:
+#        for node in node_list:
+#            for neighbor, path_len in node.neighbors.items():
+#                print(str(node)+" -> "+str(neighbor)+": "+str(path_len))
 
 def find_or_create_node(name, node_list, names):
     if name not in names:
@@ -128,12 +128,13 @@ def main(filename=""):
         node_list, network = create_network(nodes=9, fixed_capacity=1)
     set_up_network(node_list, network)
 
-    packets_to_send = [  # (iteration#, source, dest, size)
-        (0, node_list[0], node_list[1], 10),
-        (0, node_list[0], node_list[2], 10),
-        (0, node_list[0], node_list[3], 10),
-        (0, node_list[0], node_list[4], 10)
-    ]
+    #Load up packets to be sent
+    packets_to_send = []
+    for i in range(0, 100):
+        n1 = random.randint(0, len(network))
+        n2 = random.randint(0, len(network))
+        #(iteration#, source, dest, size)
+        packets_to_send.append((0, node_list[n1], node_list[n2], 100))
 
     #Start simulation
     iteration_num = 0#Counter variable
@@ -148,10 +149,11 @@ def main(filename=""):
                 packets_to_send.remove(packet)
         for node in node_list:
             node.loop_step()
+        for node in node_list:
             node.dont_do_yet = []
         iteration_num += 1
         
     print("Simulation took "+str(iteration_num)+" iterations")
 
 if __name__ == "__main__":
-    main(filename="testNetwork.csv")
+    main(filename="nwork.csv")
