@@ -34,23 +34,26 @@ class Node:
     def route_packets(self):
         #Packet here is a tuple
         for packet_tuple in self.send_queue:
-            destination, packet_size = packet_tuple
+            destination, packet_size, src = packet_tuple
             if destination in self.lookup_table:
-                self.in_progress.append(
-                    {
-                        "send_to": self.lookup_table[destination][0],
-                        "destination": destination,
-                        "amount_left": packet_size,
-                        "packet_size": packet_size
-                    })
-            else:
-                print("IMPOSSIBLE TO ROUTE FROM "+str(self)+" TO "+str(destination))
+                send_to = self.lookup_table[destination][0]
+                if send_to is not src:
+                    self.in_progress.append(
+                        {
+                            "send_to": send_to,
+                            "destination": destination,
+                            "amount_left": packet_size,
+                            "packet_size": packet_size,
+                            "sent_from": self
+                        })
+                else:
+                    print("IMPOSSIBLE TO ROUTE FROM "+str(self)+" TO "+str(destination))
+
             self.send_queue.remove(packet_tuple)
 
     def has_route_impossibility(self):
-#        print(len(self.send_queue))
         for packet_tuple in self.send_queue:
-            destination, packet_size = packet_tuple
+            destination, packet_size, src = packet_tuple
             if destination not in self.lookup_table:
                 return self, destination
         return None
@@ -67,7 +70,7 @@ class Node:
                     del packet["send_to"].recv_queue[(self, packet["destination"])]
                     packet["send_to"].dont_do_yet.append(packet["destination"])
                     if packet["send_to"] is not packet["destination"]:
-                        packet["send_to"].send_queue.append((packet["destination"], packet["packet_size"]))
+                        packet["send_to"].send_queue.append((packet["destination"], packet["packet_size"], packet["sent_from"]))
                 packet["amount_left"] -= amount_possible
                 iteration_capacity[packet["send_to"]] -= amount_possible
                 if PRINT_STEPS:

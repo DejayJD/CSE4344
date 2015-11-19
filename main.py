@@ -83,7 +83,7 @@ def load_from_file(filename):
     return node_list, network
 
 def send_packet(src, dest, size):
-    src.send_queue.append((dest, size))
+    src.send_queue.append((dest, size, src))
 
 #Detect if any of the nodes still have packets in their queue
 def network_active(node_list):
