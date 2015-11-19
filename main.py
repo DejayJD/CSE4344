@@ -78,7 +78,6 @@ def calculate_paths(node_list, source):
 def set_up_network(node_list, network):
     for node in node_list:
         node.get_adjacent_nodes(network)
-    for node in node_list:
         paths = calculate_paths(node_list, node)
         for dest, (send_to, path_len) in paths.items():
             if send_to:
@@ -88,6 +87,7 @@ def set_up_network(node_list, network):
 #            for neighbor, path_len in node.neighbors.items():
 #                print(str(node)+" -> "+str(neighbor)+": "+str(path_len))
 
+#This function will append to the nodelist
 def find_or_create_node(name, node_list, names):
     if name not in names:
         new_node = Node(name)
@@ -99,6 +99,8 @@ def find_or_create_node(name, node_list, names):
             if node.name == name:
                 return node
 
+#Node list and names could just be condensed to a dictionary
+#This would make it faster as it wouldn't need to iterate through the list
 def load_from_file(filename):
     node_list = []
     network = []
@@ -120,12 +122,29 @@ def network_active(node_list):
         if node.send_queue or node.in_progress:
             return True
 
+#This returns a list of networks
+def partition_network(network):
+    nworks = [[], []]#For now we half the network
+    set1 = set()
+    set2 = set()
+    i = 0
+    for link in network:
+        if i % 2 == 0:
+            nworks[0].append(link)
+            set1.add(link[0].name)#Only add first node because of direction of link
+        else:
+            nworks[1].append(link)
+            set2.add(link[0].name)
+    return (nworks, (set1, set2))
+
 def main(filename=""):
     #Setup simulation
     if filename:
         node_list, network = load_from_file(filename)
     else:
-        node_list, network = create_network(nodes=9, fixed_capacity=1)
+        node_list, network = create_network()
+
+    #Partition the network
     set_up_network(node_list, network)
 
     #Load up packets to be sent
