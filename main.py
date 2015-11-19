@@ -112,7 +112,7 @@ def send_packets(node_list, packets_to_send):
     print("Simulation took "+str(iteration_num)+" iterations")
 
 def create_link(n1, n2, fixed_capacity):
-    return (n1, n2, fixed_capacity if fixed_capacity else random.randint(1, 100))
+    return (n1, n2, fixed_capacity if fixed_capacity else random.randint(1, 10))
 
 #This creates the initial network
 def create_network(node_count=9, fixed_capacity=0):
@@ -150,7 +150,7 @@ def generate_packets(network, node_list, num_packets):
         n1 = int(random.choice(node_list).name)
         n2 = int(random.choice(node_list).name)
         #(iteration#, source, dest, size)
-        packets_to_send.append((0, random.choice(node_list), random.choice(node_list), 5))
+        packets_to_send.append((0, random.choice(node_list), random.choice(node_list), 10))
     return packets_to_send
 
 
