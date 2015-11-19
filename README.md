@@ -13,3 +13,10 @@ To write a network to csv
 node_list, network = create_network()
 network_to_csv('nwork1.csv', network)
 ```
+
+To visualize a network stored as a csv file change the filename in graph.py.
+Then just run graph.py
+
+Also make sure you have dependencies installed
+pip install networkx
+pip install matplotlib

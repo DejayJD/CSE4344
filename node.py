@@ -47,6 +47,14 @@ class Node:
                 print("IMPOSSIBLE TO ROUTE FROM "+str(self)+" TO "+str(destination))
             self.send_queue.remove(packet_tuple)
 
+    def has_route_impossibility(self):
+#        print(len(self.send_queue))
+        for packet_tuple in self.send_queue:
+            destination, packet_size = packet_tuple
+            if destination not in self.lookup_table:
+                return self, destination
+        return None
+
     def process_queue(self):
         iteration_capacity = self.neighbors.copy()
         # transfer what you can
