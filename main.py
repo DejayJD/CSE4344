@@ -153,28 +153,10 @@ def generate_packets(network, node_list, num_packets):
         packets_to_send.append((0, random.choice(node_list), random.choice(node_list), 10))
     return packets_to_send
 
-
-def main(filename=""):
-    #Setup simulation
-    if filename:
-        node_list, network = load_from_file(filename)
-    else:
-        node_list, network = create_network(100)
-
-    set_up_network(node_list, network)#Initial network
-    network_to_csv("nwork2.csv", network)
-
-    #Robustify the network
+#Robustify the network
+#This takes a couple of seconds
+def generate_robust_network(node_list, network):
     packets_to_send = []
-
-    #Actual network simulation
-    packets_to_send = []
-    packets_to_send = generate_packets(network, node_list, 100)
-    send_packets(node_list, packets_to_send)
-
-    print("---------------------------------------------------")
-    print("---------------------------------------------------")
-
     for i in range(0, 5):
         packets_to_send = generate_packets(network, node_list, 100)
 
@@ -189,12 +171,22 @@ def main(filename=""):
                 if dest is not None:
                     network.append(create_link(src, dest, False))
             node.send_queue = []
+        set_up_network(node_list, network)
 
-    set_up_network(node_list, network)
+def main(filename=""):
+    #Setup simulation
+    if filename:
+        node_list, network = load_from_file(filename)
+    else:
+        node_list, network = create_network(100)
+
+    set_up_network(node_list, network)#Initial network
+    
+    #Actual network simulation
+    packets_to_send = []
     packets_to_send = generate_packets(network, node_list, 100)
     send_packets(node_list, packets_to_send)
-    network_to_csv("nwork3.csv", network)
 
 if __name__ == "__main__":
-    main()#Use randomly generated network
-#    main(filename="nwork.csv")
+    #main()#Use randomly generated network
+    main(filename="nwork.csv")

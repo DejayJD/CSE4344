@@ -1,4 +1,5 @@
 import csv
+import sys
 
 def open_file(filename):
     network = []
@@ -11,7 +12,8 @@ def open_file(filename):
             network.append((n1, n2, weight))
     return list(nodes), network
 
-node_list, network = open_file("nwork3.csv")
+filename = sys.argv[1]
+node_list, network = open_file(filename)
 
 import networkx as nx
 
