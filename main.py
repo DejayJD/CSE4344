@@ -97,8 +97,6 @@ def send_packets(node_list, packets_to_send):
     iteration_num = 0#Counter variable
     # MAIN LOOP
     while packets_to_send or network_active(node_list):
-        if PRINT_STEPS:
-            print("ITERATION "+str(iteration_num+1))
         # send packets if it's their turn
         for packet in packets_to_send[:]:
             if iteration_num == packet[0]:
@@ -110,6 +108,7 @@ def send_packets(node_list, packets_to_send):
             node.dont_do_yet = []
         iteration_num += 1
     print("Simulation took "+str(iteration_num)+" iterations")
+    return iteration_num
 
 def create_link(n1, n2, fixed_capacity):
     return (n1, n2, fixed_capacity if fixed_capacity else random.randint(1, 10))
@@ -173,6 +172,27 @@ def generate_robust_network(node_list, network):
             node.send_queue = []
         set_up_network(node_list, network)
 
+def randomly_partition(network):
+    num_chunks = 3
+    chunked_nwork = []
+    for i in range(0, num_chunks):
+        chunked_nwork.append([])
+
+    nwork_copy = network[:]
+    for link in nwork_copy[:]:
+        index = random.randint(0, num_chunks-1)
+        chunked_nwork[index].append(link)
+        nwork_copy.remove(link)
+    return chunked_nwork
+
+def node_list_from_nwork(network):
+    node_list = []
+    names = set()
+    for n1, n2, w in network:
+        node1 = find_or_create_node(n1, node_list, names)
+        node2 = find_or_create_node(n2, node_list, names)
+    return node_list
+    
 def main(filename=""):
     #Setup simulation
     if filename:
@@ -181,12 +201,21 @@ def main(filename=""):
         node_list, network = create_network(100)
 
     set_up_network(node_list, network)#Initial network
-    
-    #Actual network simulation
-    packets_to_send = []
-    packets_to_send = generate_packets(network, node_list, 100)
-    send_packets(node_list, packets_to_send)
+    partitioned_network = randomly_partition(network)
 
+    for nwork in partitioned_network:
+        n_list = node_list_from_nwork(nwork)
+        set_up_network(n_list, nwork)
+    
+    #Run network simulation
+    num_runs = 15
+    count = 0
+    for i in range(0, num_runs):
+        packets_to_send = []
+        packets_to_send = generate_packets(network, node_list, 100)
+        count += send_packets(node_list, packets_to_send)
+    print("Average iteration count: " + str(count/num_runs))
+    
 if __name__ == "__main__":
     #main()#Use randomly generated network
     main(filename="nwork.csv")

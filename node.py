@@ -1,7 +1,7 @@
 import random
 import csv
 
-PRINT_STEPS = True
+PRINT_STEPS = False
 
 #Packets are dictionary's its fields are send_to, destination, amount_left, and packet_size
 
