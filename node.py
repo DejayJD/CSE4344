@@ -17,7 +17,8 @@ class Node:
         self.dont_do_yet = []  # [ dest ]
         self.tag = 0
         self.flow_count = 0
-        self.in_progress_stats = {}
+        self.completed_flows = 0
+        self.mean_slowdown_sum = 0
 
     def __repr__(self):
         return "Node " + str(self.name)
@@ -99,6 +100,8 @@ class Node:
             if packet["amount_left"] == 0:
                 #Do math
                 packet_mean_slowdown = (time.time() - packet["release_time"])/packet["lifetime"]
+                self.mean_slowdown_sum += packet_mean_slowdown
+                self.completed_flows+=1
                 print("Flow mean slowdown " + str(packet_mean_slowdown))
                 #Delete
                 self.in_progress.remove(packet)

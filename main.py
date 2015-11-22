@@ -204,6 +204,15 @@ def randomly_tag_nodes(nodelist):
         else:
             node.tag = tag
 
+def calculate_global_mean_slowdown(nodelist):
+    net_mean_slowdown_sum = 0
+    count = 0
+    for node in nodelist:
+        if node.completed_flows is not 0:
+            net_mean_slowdown_sum+=node.mean_slowdown_sum/node.completed_flows
+            count+=1
+    return net_mean_slowdown_sum/count
+        
 def main(filename=""):
     #Setup simulation
     if filename:
@@ -233,6 +242,8 @@ def main(filename=""):
         total = end - start
         print("Simulation took: " + str(total) + " secs")
         count += total
+        print("Global mean slowdown: " + str(calculate_global_mean_slowdown(node_list)))
+        
     print("Average duration of simulation: " + str(count/num_runs))
     
 if __name__ == "__main__":
