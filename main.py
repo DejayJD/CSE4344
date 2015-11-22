@@ -1,6 +1,7 @@
 import random
 import csv
 from node import Node
+import time
 
 PRINT_STEPS = True
 
@@ -99,16 +100,16 @@ def send_packets(node_list, packets_to_send):
     while packets_to_send or network_active(node_list):
         # send packets if it's their turn
         for packet in packets_to_send[:]:
-            if iteration_num == packet[0]:
+            if iteration_num == packet[0]:#If iteration num is time to send
                 send_packet(*(packet[1:]))
                 packets_to_send.remove(packet)
         for node in node_list:
             node.loop_step()
         for node in node_list:
             node.dont_do_yet = []
+        print("Iteration: " + str(iteration_num))
         iteration_num += 1
-    print("Simulation took "+str(iteration_num)+" iterations")
-    return iteration_num
+    print("Simulation took " + str(iteration_num) + " iterations");
 
 def create_link(n1, n2, fixed_capacity):
     return (n1, n2, fixed_capacity if fixed_capacity else random.randint(1, 10))
@@ -192,7 +193,17 @@ def node_list_from_nwork(network):
         node1 = find_or_create_node(n1, node_list, names)
         node2 = find_or_create_node(n2, node_list, names)
     return node_list
-    
+
+def randomly_tag_nodes(nodelist):
+    for node in nodelist:
+        tag = random.randint(0, 3)
+        if tag is 0:
+            node.tag = tag
+        elif tag is 1:
+            node.tag = tag
+        else:
+            node.tag = tag
+
 def main(filename=""):
     #Setup simulation
     if filename:
@@ -200,21 +211,29 @@ def main(filename=""):
     else:
         node_list, network = create_network(100)
 
+    start = time.time()
     set_up_network(node_list, network)#Initial network
-    partitioned_network = randomly_partition(network)
+    end = time.time()
+    print("Time to set up network: " + str(end - start))
+    #partitioned_network = randomly_partition(network)
 
-    for nwork in partitioned_network:
-        n_list = node_list_from_nwork(nwork)
-        set_up_network(n_list, nwork)
+    #for nwork in partitioned_network:
+    #    n_list = node_list_from_nwork(nwork)
+    #    set_up_network(n_list, nwork)
     
     #Run network simulation
     num_runs = 15
     count = 0
     for i in range(0, num_runs):
+        start = time.time()
         packets_to_send = []
         packets_to_send = generate_packets(network, node_list, 100)
-        count += send_packets(node_list, packets_to_send)
-    print("Average iteration count: " + str(count/num_runs))
+        send_packets(node_list, packets_to_send)
+        end = time.time()
+        total = end - start
+        print("Simulation took: " + str(total) + " secs")
+        count += total
+    print("Average duration of simulation: " + str(count/num_runs))
     
 if __name__ == "__main__":
     #main()#Use randomly generated network
