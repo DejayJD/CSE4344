@@ -151,14 +151,30 @@ def create_network(node_count=9, fixed_capacity=0):
         print("Created network with "+str(node_count)+" nodes.")
     return node_list, network
 
+#Generate packets more according to a real world situation.
+#Certain nodes will be more inclined to send a lot of heavy packets
+#Other nodes will send other sizes
 def generate_packets(network, node_list, num_packets):
     #Generate packets to be sent
     packets_to_send = []
+    precedence = {}
+    
     for i in range(0, num_packets):
-        n1 = int(random.choice(node_list).name)
-        n2 = int(random.choice(node_list).name)
+        n1 = random.choice(node_list)
+        n2 = random.choice(node_list)
+        packet_size = 0
+        if n1 in precedence:
+            size = precedence[n1]
+            noise = random.randint(-3, 3)
+            size += noise
+            if size > 10: size = 10
+            if size < 1: size = 0
+            packet_size = size
+        else:
+            packet_size = random.randint(0, 10)
         #(iteration#, source, dest, size)
-        packets_to_send.append((0, random.choice(node_list), random.choice(node_list), 10))
+        packets_to_send.append((0, n1, n2, packet_size))
+        precedence[n1] = packet_size
     return packets_to_send
 
 #Robustify the network
