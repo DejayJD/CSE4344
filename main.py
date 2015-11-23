@@ -19,39 +19,47 @@ def calculate_paths(node_list, source):
     :return: { destination -> (first node on path, path length) }
     """
     result = {n: (None, float("inf")) for n in node_list}
-    result[source] = (None, 0)
-    node_list = node_list[:]  # make a copy for use in here
+    result[source] = (None, 0)#on initial run through the loop this will be chosen as min_node
+    node_list = node_list[:]  # make a copy for use in this function
     while node_list:
         min_node = None
         min_node_dist = float("inf")
+        #float("inf") < 2 = False
 
         # find min distanced node
+        # The first node will get set to min_node on initial run
+        # Then it goes through whole thing to see which is smaller 
         for node in node_list:
             if result[node][1] < min_node_dist:
                 min_node = node
                 min_node_dist = result[node][1]
-        if min_node:  # check for disconnected graph
-            node_list.remove(min_node)
-            for neighbor, dist in min_node.neighbors.items():
+                
+        if min_node:  #check for disconnected graph
+            node_list.remove(min_node)#Node list minus the minimum node
+            #Loop through min nodes neighbors
+            for neighbor, dist in min_node.neighbors.items():#The distance data is retrieved from the neighbors
                 new_dist = result[min_node][1] + dist
-                if new_dist < result[neighbor][1]:
+                if new_dist < result[neighbor][1]:#If two steps is better than direct, also mostly float("inf")
                     if min_node is source or min_node in source.neighbors:
                         send_to = min_node
                     else:
                         send_to = result[min_node][0]
-                    result[neighbor] = (send_to, new_dist)
-        else:
+                    result[neighbor] = (send_to, new_dist)#This is what is filling results with useful data
+                else:
+                    continue
+        else:#This does not get called every time the function is called
             break
-
     return result
 
-def set_up_network(node_list, network):
+def set_up_network(node_list, network, tag):
     for node in node_list:
-        node.get_adjacent_nodes(network)
+        node.get_adjacent_nodes(network)#Fill up node.neighbors
+        #Setting neighbors is when their capacity should be defined
+        #The capacity is separate from their distance
         paths = calculate_paths(node_list, node)
         for dest, (send_to, path_len) in paths.items():
             if send_to:
-                node.add_lookup(dest, send_to if send_to is not node else dest, path_len)
+                node.add_lookup(dest, send_to if send_to is not node else dest, tag)
 #    if PRINT_STEPS:
 #        for node in node_list:
 #            for neighbor, path_len in node.neighbors.items():
@@ -212,26 +220,9 @@ def calculate_global_mean_slowdown(nodelist):
             net_mean_slowdown_sum+=node.mean_slowdown_sum/node.completed_flows
             count+=1
     return net_mean_slowdown_sum/count
-        
-def main(filename=""):
-    #Setup simulation
-    if filename:
-        node_list, network = load_from_file(filename)
-    else:
-        node_list, network = create_network(100)
 
-    start = time.time()
-    set_up_network(node_list, network)#Initial network
-    end = time.time()
-    print("Time to set up network: " + str(end - start))
-    #partitioned_network = randomly_partition(network)
-
-    #for nwork in partitioned_network:
-    #    n_list = node_list_from_nwork(nwork)
-    #    set_up_network(n_list, nwork)
-    
+def run_simulations(network, node_list, num_runs):
     #Run network simulation
-    num_runs = 15
     count = 0
     for i in range(0, num_runs):
         start = time.time()
@@ -245,6 +236,45 @@ def main(filename=""):
         print("Global mean slowdown: " + str(calculate_global_mean_slowdown(node_list)))
         
     print("Average duration of simulation: " + str(count/num_runs))
+
+def bias_network(tag, network):
+    for link in network:
+        n1, n2, weight = link
+        if n2.tag is tag:
+            weight = 0
+        link = (n1, n2, weight)
+        
+def main(filename=""):
+    #Setup simulation
+    if filename:
+        node_list, network = load_from_file(filename)
+    else:
+        node_list, network = create_network(100)
+
+    randomly_tag_nodes(node_list)
+    start = time.time()
+    #Modify the network for each type of flow
+    long_nwork = network[:]
+    bias_network("long", long_nwork)
+    set_up_network(node_list, long_nwork, "long")#Initial network
+    mid_nwork = network[:]
+    bias_network("mid", mid_nwork)
+    set_up_network(node_list, mid_nwork, "mid")#Initial network
+    short_nwork = network[:]
+    bias_network("short", short_nwork)
+    set_up_network(node_list, short_nwork, "short")#Initial network
+    end = time.time()
+    print("Time to set up network: " + str(end - start))
+
+    #Set iteration capacity hack
+    #This reuses the network proper without bias to set iteration_capacity
+    #This is not the same as distances between nodes
+    #Needs to be run anytime the network is setup
+    #This includes when it is reset up
+    for node in node_list:
+        node.get_adjacent_nodes(network)
+    
+    run_simulations(network, node_list, 10)
     
 if __name__ == "__main__":
     #main()#Use randomly generated network

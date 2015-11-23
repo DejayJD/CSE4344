@@ -19,12 +19,19 @@ class Node:
         self.flow_count = 0
         self.completed_flows = 0
         self.mean_slowdown_sum = 0
+        self.long_lookup = {}
+        self.mid_lookup = {}
+        self.short_lookup = {}
 
     def __repr__(self):
         return "Node " + str(self.name)
 
     #What is link 0 and link 1?
     def get_adjacent_nodes(self, network):
+        #This fills up the neighbors dict
+        #Link[0] = n1
+        #Link[1] = n2
+        #Link[2] = weight
         for link in network:
             if link[0] is self or link[1] is self:
                 if link[0] is self:
@@ -33,8 +40,23 @@ class Node:
                     self.neighbors[link[0]] = link[2]
 
     #This adds a route to lookup table                
-    def add_lookup(self, destination, send_to, path_len):
-        self.lookup_table[destination] = (send_to, path_len)
+    def add_lookup(self, destination, send_to, tag):
+        #Lookup up table is setted here
+        #self.lookup_table[destination] = send_to
+        if tag is "long":
+            self.long_lookup[destination] = send_to
+        elif tag is "mid":
+            self.mid_lookup[destination] = send_to
+        else:
+            self.short_lookup[destination] = send_to
+
+    def tag_packet(self, packet_size):
+        if packet_size < 3:
+            return "short"
+        elif packet_size >= 3 and packet_size < 6:
+            return "mid"
+        else:
+            return "long"
 
     def route_packets(self):
         #Packet here is a tuple
@@ -43,8 +65,16 @@ class Node:
         #add id to en route dict
         for packet_tuple in self.send_queue:
             destination, packet_size, src = packet_tuple
-            if destination in self.lookup_table:
-                send_to = self.lookup_table[destination][0]
+            packet_tag = self.tag_packet(packet_size)
+            if packet_tag is "long":
+                lookup_table = self.long_lookup
+            elif packet_tag is "mid":
+                lookup_table = self.mid_lookup
+            else:
+                lookup_table = self.short_lookup
+            #lookup table is only ever getted from here
+            if destination in lookup_table:
+                send_to = lookup_table[destination]
                 if send_to is not src:
                     self.in_progress.append(
                         {
@@ -55,7 +85,8 @@ class Node:
                             "sent_from": self,
                             "id": self.flow_count,
                             "lifetime": 1,
-                            "release_time": time.time()
+                            "release_time": time.time(),
+                            "tag": packet_tag
                         })
                     self.flow_count+=1
                 else:
@@ -72,6 +103,7 @@ class Node:
         return None
 
     def process_queue(self):
+        #Neighbors holds weights not capacity
         iteration_capacity = self.neighbors.copy()
         # transfer what you can
         for packet in (p for p in self.in_progress if p["destination"] not in self.dont_do_yet):
