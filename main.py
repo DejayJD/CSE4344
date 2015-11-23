@@ -154,10 +154,10 @@ def create_network(node_count=9, fixed_capacity=0):
 #Generate packets more according to a real world situation.
 #Certain nodes will be more inclined to send a lot of heavy packets
 #Other nodes will send other sizes
-def generate_packets(network, node_list, num_packets):
+def generate_packets(network, node_list, num_packets, in_precedence):
     #Generate packets to be sent
     packets_to_send = []
-    precedence = {}
+    precedence = in_precedence if in_precedence is not None else {}
     
     for i in range(0, num_packets):
         n1 = random.choice(node_list)
@@ -175,7 +175,7 @@ def generate_packets(network, node_list, num_packets):
         #(iteration#, source, dest, size)
         packets_to_send.append((0, n1, n2, packet_size))
         precedence[n1] = packet_size
-    return packets_to_send
+    return packets_to_send, precedence
 
 #Robustify the network
 #This takes a couple of seconds
@@ -237,10 +237,8 @@ def calculate_global_mean_slowdown(nodelist):
             count+=1
     return net_mean_slowdown_sum/count
 
-def run_simulation(network, node_list):
+def run_simulation(network, node_list, packets_to_send):
     start = time.time()
-    packets_to_send = []
-    packets_to_send = generate_packets(network, node_list, 100)
     send_packets(node_list, packets_to_send)
     end = time.time()
     total = end - start
@@ -248,11 +246,11 @@ def run_simulation(network, node_list):
     print("Global mean slowdown: " + str(calculate_global_mean_slowdown(node_list)))
     return total
 
-def run_simulations(network, node_list, num_runs):
+def run_simulations(network, node_list, num_runs, packets_to_send):
     #Run network simulation
     count = 0
     for i in range(0, num_runs):
-        total = run_simulation(network, node_list)
+        total = run_simulation(network, node_list, packets_to_send)
         count += total        
     print("Average duration of simulation: " + str(count/num_runs))
 
@@ -277,6 +275,12 @@ def setup_tagged_network(node_list, network):
     set_up_network(node_list, short_nwork, "short")#Initial network
     end = time.time()
     print("Time to set up network: " + str(end - start))
+    #Set iteration capacity hack
+    #This reuses the network proper without bias to set iteration_capacity
+    #This is not the same as distances between nodes
+    #Needs to be run anytime a tagged network is being setup
+    for node in node_list:
+        node.get_adjacent_nodes(network)
 
 def main(filename=""):
     #Setup simulation
@@ -287,16 +291,9 @@ def main(filename=""):
 
     randomly_tag_nodes(node_list)
     setup_tagged_network(node_list, network)
-
-    #Set iteration capacity hack
-    #This reuses the network proper without bias to set iteration_capacity
-    #This is not the same as distances between nodes
-    #Needs to be run anytime the network is setup
-    #This includes when it is reset up
-    for node in node_list:
-        node.get_adjacent_nodes(network)
     
-    run_simulations(network, node_list, 10)
+    packets_to_send, precedence = generate_packets(network, node_list, 100, None)
+    run_simulation(network, node_list, packets_to_send)
     
 if __name__ == "__main__":
     #main()#Use randomly generated network
