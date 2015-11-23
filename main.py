@@ -2,6 +2,7 @@ import random
 import csv
 from node import Node
 import time
+from multiprocessing import Process
 
 PRINT_STEPS = True
 
@@ -261,18 +262,31 @@ def bias_network(tag, network):
             weight = 0
         link = (n1, n2, weight)
 
+def setup_sub_network(tag, node_list, network):
+    nwork = network[:]
+    bias_network(tag, nwork)
+    set_up_network(node_list, nwork, tag)
+
+#Currently this doesn't work because each process needs to get
+#passed its own node_list. Which is the easy part.
+#Hard part is merging all those node_lists together
+def start_of_parallel_stuff():
+    p1 = Process(target=setup_sub_network, args=("long", node_list, network,))
+    p2 = Process(target=setup_sub_network, args=("mid", node_list, network,))
+    p3 = Process(target=setup_sub_network, args=("short", node_list, network,))
+    p1.start()
+    p2.start()
+    p3.start()
+    p1.join()
+    p2.join()
+    p3.join()
+    
 def setup_tagged_network(node_list, network):    
     start = time.time()
     #Modify the network for each type of flow
-    long_nwork = network[:]
-    bias_network("long", long_nwork)
-    set_up_network(node_list, long_nwork, "long")#Initial network
-    mid_nwork = network[:]
-    bias_network("mid", mid_nwork)
-    set_up_network(node_list, mid_nwork, "mid")#Initial network
-    short_nwork = network[:]
-    bias_network("short", short_nwork)
-    set_up_network(node_list, short_nwork, "short")#Initial network
+    setup_sub_network("long", node_list, network)
+    setup_sub_network("mid", node_list, network)
+    setup_sub_network("short", node_list, network)
     end = time.time()
     print("Time to set up network: " + str(end - start))
     #Set iteration capacity hack
