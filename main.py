@@ -237,20 +237,23 @@ def calculate_global_mean_slowdown(nodelist):
             count+=1
     return net_mean_slowdown_sum/count
 
+def run_simulation(network, node_list):
+    start = time.time()
+    packets_to_send = []
+    packets_to_send = generate_packets(network, node_list, 100)
+    send_packets(node_list, packets_to_send)
+    end = time.time()
+    total = end - start
+    print("Simulation took: " + str(total) + " secs")
+    print("Global mean slowdown: " + str(calculate_global_mean_slowdown(node_list)))
+    return total
+
 def run_simulations(network, node_list, num_runs):
     #Run network simulation
     count = 0
     for i in range(0, num_runs):
-        start = time.time()
-        packets_to_send = []
-        packets_to_send = generate_packets(network, node_list, 100)
-        send_packets(node_list, packets_to_send)
-        end = time.time()
-        total = end - start
-        print("Simulation took: " + str(total) + " secs")
-        count += total
-        print("Global mean slowdown: " + str(calculate_global_mean_slowdown(node_list)))
-        
+        total = run_simulation(network, node_list)
+        count += total        
     print("Average duration of simulation: " + str(count/num_runs))
 
 def bias_network(tag, network):
@@ -259,15 +262,8 @@ def bias_network(tag, network):
         if n2.tag is tag:
             weight = 0
         link = (n1, n2, weight)
-        
-def main(filename=""):
-    #Setup simulation
-    if filename:
-        node_list, network = load_from_file(filename)
-    else:
-        node_list, network = create_network(100)
 
-    randomly_tag_nodes(node_list)
+def setup_tagged_network(node_list, network):    
     start = time.time()
     #Modify the network for each type of flow
     long_nwork = network[:]
@@ -281,6 +277,16 @@ def main(filename=""):
     set_up_network(node_list, short_nwork, "short")#Initial network
     end = time.time()
     print("Time to set up network: " + str(end - start))
+
+def main(filename=""):
+    #Setup simulation
+    if filename:
+        node_list, network = load_from_file(filename)
+    else:
+        node_list, network = create_network(100)
+
+    randomly_tag_nodes(node_list)
+    setup_tagged_network(node_list, network)
 
     #Set iteration capacity hack
     #This reuses the network proper without bias to set iteration_capacity
