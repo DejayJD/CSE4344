@@ -3,8 +3,9 @@ import csv
 from node import Node
 import time
 from multiprocessing import Process
+from copy import deepcopy
 
-PRINT_STEPS = True
+PRINT_STEPS = False
 
 def network_to_csv(filename, network):
     with open(filename, 'w') as out:
@@ -25,7 +26,6 @@ def calculate_paths(node_list, source):
     while node_list:
         min_node = None
         min_node_dist = float("inf")
-        #float("inf") < 2 = False
 
         # find min distanced node
         # The first node will get set to min_node on initial run
@@ -34,7 +34,6 @@ def calculate_paths(node_list, source):
             if result[node][1] < min_node_dist:
                 min_node = node
                 min_node_dist = result[node][1]
-                
         if min_node:  #check for disconnected graph
             node_list.remove(min_node)#Node list minus the minimum node
             #Loop through min nodes neighbors
@@ -46,8 +45,6 @@ def calculate_paths(node_list, source):
                     else:
                         send_to = result[min_node][0]
                     result[neighbor] = (send_to, new_dist)#This is what is filling results with useful data
-                else:
-                    continue
         else:#This does not get called every time the function is called
             break
     return result
@@ -60,7 +57,7 @@ def set_up_network(node_list, network, tag):
         paths = calculate_paths(node_list, node)
         for dest, (send_to, path_len) in paths.items():
             if send_to:
-                node.add_lookup(dest, send_to if send_to is not node else dest, tag)
+                node.add_lookup(dest, send_to if send_to is not node else dest, tag, path_len)
 #    if PRINT_STEPS:
 #        for node in node_list:
 #            for neighbor, path_len in node.neighbors.items():
@@ -116,7 +113,8 @@ def send_packets(node_list, packets_to_send):
             node.loop_step()
         for node in node_list:
             node.dont_do_yet = []
-        print("Iteration: " + str(iteration_num))
+        if PRINT_STEPS:
+            print("Iteration: " + str(iteration_num))
         iteration_num += 1
     print("Simulation took " + str(iteration_num) + " iterations");
 
@@ -223,11 +221,23 @@ def randomly_tag_nodes(nodelist):
     for node in nodelist:
         tag = random.randint(0, 3)
         if tag is 0:
-            node.tag = tag
+            node.tag = "long"
         elif tag is 1:
-            node.tag = tag
+            node.tag = "mid"
         else:
-            node.tag = tag
+            node.tag = "short"
+
+def random_encoding(nodelist):
+    encoding = []
+    for node in nodelist:
+        tag = random.randint(0, 3)
+        if tag is 0:
+            encoding.append("L")
+        elif tag is 1:
+            encoding.append("M")
+        else:
+            encoding.append("S")
+    return encoding
 
 def calculate_global_mean_slowdown(nodelist):
     net_mean_slowdown_sum = 0
@@ -236,6 +246,7 @@ def calculate_global_mean_slowdown(nodelist):
         if node.completed_flows is not 0:
             net_mean_slowdown_sum+=node.mean_slowdown_sum/node.completed_flows
             count+=1
+    if count is 0: count = 1
     return net_mean_slowdown_sum/count
 
 def run_simulation(network, node_list, packets_to_send):
@@ -270,16 +281,27 @@ def setup_sub_network(tag, node_list, network):
 #Currently this doesn't work because each process needs to get
 #passed its own node_list. Which is the easy part.
 #Hard part is merging all those node_lists together
-def start_of_parallel_stuff():
-    p1 = Process(target=setup_sub_network, args=("long", node_list, network,))
-    p2 = Process(target=setup_sub_network, args=("mid", node_list, network,))
-    p3 = Process(target=setup_sub_network, args=("short", node_list, network,))
+def start_of_parallel_stuff(node_list, network):
+    long_node_list = node_list[:]
+    mid_node_list = node_list[:]
+    short_node_list = node_list[:]
+    p1 = Process(target=setup_sub_network, args=("long", long_node_list, network,))
+    p2 = Process(target=setup_sub_network, args=("mid", mid_node_list, network,))
+    p3 = Process(target=setup_sub_network, args=("short", short_node_list, network,))
     p1.start()
     p2.start()
     p3.start()
     p1.join()
     p2.join()
     p3.join()
+    for n1, n2 in zip(node_list, long_node_list):
+        n1.long_lookup = n2.long_lookup
+    for n1, n2 in zip(node_list, mid_node_list):
+        n1.mid_lookup = n2.mid_lookup
+    for n1, n2 in zip(node_list, short_node_list):
+        n1.short_lookup = n2.short_lookup
+    for node in node_list:
+        node.get_adjacent_nodes(network)
     
 def setup_tagged_network(node_list, network):    
     start = time.time()
@@ -296,6 +318,39 @@ def setup_tagged_network(node_list, network):
     for node in node_list:
         node.get_adjacent_nodes(network)
 
+def encode_list(node_list):
+    encoding = []
+    for n in node_list:
+        if n.tag is "long":
+            encoding.append("L")
+        elif n.tag is "mid":
+            encoding.append("M")
+        else:
+            encoding.append("S")
+    return encoding
+
+def decode_list(encoding, node_list):
+    for code, node in zip(encoding, node_list):
+        if code is "L":
+            node.tag = "long"
+        elif code is "M":
+            node.tag = "mid"
+        else:
+            node.tag = "short"
+
+def load_from_file2(filename, node_list):
+    network = []
+    names = set()
+    for n in node_list:
+        names.add(n.name)
+    with open(filename) as csvfile:
+        reader = csv.reader(csvfile)
+        for n1, n2, weight in reader:
+            node1 = find_or_create_node(n1, node_list, names)
+            node2 = find_or_create_node(n2, node_list, names)
+            network.append((node1, node2, int(weight)))
+    return network
+
 def main(filename=""):
     #Setup simulation
     if filename:
@@ -303,11 +358,25 @@ def main(filename=""):
     else:
         node_list, network = create_network(100)
 
-    randomly_tag_nodes(node_list)
-    setup_tagged_network(node_list, network)
     
-    packets_to_send, precedence = generate_packets(network, node_list, 100, None)
-    run_simulation(network, node_list, packets_to_send)
+    #pkts = packets_to_send[:]
+    #randomly_tag_nodes(node_list)
+        
+    node_list2 = deepcopy(node_list)
+    #set_up_network(node_list, network, None)
+    #setup_tagged_network(node_list, network)
+
+    #run_simulation(network, node_list, packets_to_send)
+
+    #decode_list(encoding, node_list)
+    network2 = load_from_file2("nwork.csv", node_list2)
+    packets_to_send, precedence = generate_packets(network2, node_list2, 100, None)
+    set_up_network(node_list2, network2, None)
+
+    #setup_tagged_network(node_list, network2)
+    
+    #packets_to_send, precedence = generate_packets(network, node_list, 100, None)
+    run_simulation(network2, node_list2, packets_to_send)
     
 if __name__ == "__main__":
     #main()#Use randomly generated network

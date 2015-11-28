@@ -2,7 +2,7 @@ import random
 import csv
 import time
 
-PRINT_STEPS = True
+PRINT_STEPS = False
 
 #Packets are dictionary's its fields are send_to, destination, amount_left, and packet_size
 
@@ -40,15 +40,17 @@ class Node:
                     self.neighbors[link[0]] = link[2]
 
     #This adds a route to lookup table                
-    def add_lookup(self, destination, send_to, tag):
+    def add_lookup(self, destination, send_to, tag, path_len):
         #Lookup up table is setted here
         #self.lookup_table[destination] = send_to
         if tag is "long":
             self.long_lookup[destination] = send_to
         elif tag is "mid":
             self.mid_lookup[destination] = send_to
-        else:
+        elif tag is "short":
             self.short_lookup[destination] = send_to
+        else:#This line allows it to setup even if there are not tags
+            self.lookup_table[destination] = (send_to, path_len)
 
     def tag_packet(self, packet_size):
         if packet_size < 3:
@@ -65,16 +67,22 @@ class Node:
         #add id to en route dict
         for packet_tuple in self.send_queue:
             destination, packet_size, src = packet_tuple
-            packet_tag = self.tag_packet(packet_size)
+            #packet_tag = self.tag_packet(packet_size)
+            packet_tag = None
             if packet_tag is "long":
                 lookup_table = self.long_lookup
             elif packet_tag is "mid":
                 lookup_table = self.mid_lookup
-            else:
+            elif packet_tag is "short":
                 lookup_table = self.short_lookup
+            else:
+                lookup_table = self.lookup_table
             #lookup table is only ever getted from here
             if destination in lookup_table:
-                send_to = lookup_table[destination]
+                if lookup_table == self.lookup_table:
+                    send_to = self.lookup_table[destination][0]
+                else:
+                    send_to = lookup_table[destination]
                 if send_to is not src:
                     self.in_progress.append(
                         {
@@ -134,7 +142,7 @@ class Node:
                 packet_mean_slowdown = (time.time() - packet["release_time"])/packet["lifetime"]
                 self.mean_slowdown_sum += packet_mean_slowdown
                 self.completed_flows+=1
-                print("Flow mean slowdown " + str(packet_mean_slowdown))
+                #print("Flow mean slowdown " + str(packet_mean_slowdown))
                 #Delete
                 self.in_progress.remove(packet)
             else:
