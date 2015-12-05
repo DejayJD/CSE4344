@@ -372,7 +372,7 @@ def main(filename=""):
 
     print("Breeding changing data network")
     start = time.time()
-    changing_bred = evolve_with_changing_data(node_table, network, p_root, 20, 30, slowdown_fitness)
+    changing_bred = evolve_with_changing_data(node_table, network, p_root, 30, 50, slowdown_fitness)
     end = time.time()
     print("Breeding changing data process took " + str(end - start) + " seconds")
     print("Changing bred output initial")
