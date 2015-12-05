@@ -334,21 +334,24 @@ def evolve_with_changing_data(node_table, network, p_root, pop_size, num_generat
     encoding_fn = gen_encoding_closure(node_table, network)
     gen_count = 0
     precedence = {}
-    while gen_count < num_generations:
-        packets, precedence = generate_packets(node_table, pop_size, precedence)
-        tagged_ntables = map(encoding_fn, encodings)
-        packet_list = packets_copies(packets, pop_size)
-        results = map(lambda table, packets: run_simulation(table, packets, True), tagged_ntables, packet_list)
-        top_2 = select_top_2(encodings, results, fitness_fn)
-        encodings = breed_top_2(top_2, pop_size)
-        gen_count+=1
-    #Run eval fns one more time
+    with open('evolution_results.csv', 'wb') as csvfile:
+        file_writer = csv.writer(csvfile)
+        while gen_count < num_generations:
+            packets, precedence = generate_packets(node_table, pop_size, precedence)
+            tagged_ntables = map(encoding_fn, encodings)
+            packet_list = packets_copies(packets, pop_size)
+            results = map(lambda table, packets: run_simulation(table, packets, True), tagged_ntables, packet_list)
+            top_2 = select_top_2(encodings, results, fitness_fn)
+            #file_writer.writerow(top_2[0][1])
+            encodings = breed_top_2(top_2, pop_size)
+            gen_count+=1
+        
+    #Run eval fns one more time to best out of encodings
     tagged_ntables = map(encoding_fn, encodings)
     packet_list = packets_copies(p_root, pop_size)
     results = map(lambda table, packets: run_simulation(table, packets, True), tagged_ntables, packet_list)
     top_2 = select_top_2(encodings, results, fitness_fn)
     return top_2[0]
-
     
 def main(filename=""):
     if filename:
@@ -379,7 +382,7 @@ def main(filename=""):
     else:
         print("Bred individual is less fit")
 
-    print("Performance increase by " + str((changing_bred[1][0] / not_tagged_data[0]) * 100) + " %")
+    print("Performance increase by " + str(((not_tagged_data[0] - changing_bred[1][0]) / not_tagged_data[0]) * 100) + " %")
 
     encoding_fn = gen_encoding_closure(node_table, network)
     nt3 = encoding_fn(changing_bred[0])
@@ -387,13 +390,15 @@ def main(filename=""):
     untagged_sums = (0, 0, 0)
     changing_sums = (0, 0, 0)
     num_tests = 200
-    percentage_average = 0
+    percentage_sum = 0
     for i in range(0, num_tests):
         packets2, precedence = generate_packets(node_table, 1000, precedence)
         untagged_data = run_simulation(node_table, packets2[:])
         changing_data = run_simulation(nt3, packets2[:])
+        percentage_sum+= ((untagged_data[0] - changing_data[0]) / untagged_data[0]) * 100
         untagged_sums = map(lambda a, b: a + b, untagged_sums, untagged_data)
         changing_sums = map(lambda a, b: a + b, changing_sums, changing_data)
+    print("Average difference between networks " + str(percentage_sum / num_tests) + str("%"))
     print("Average runs with untagged")
     untagged_results = map(lambda a: a / num_tests, untagged_sums)
     print_results(untagged_results)
@@ -401,7 +406,7 @@ def main(filename=""):
     tagged_results = map(lambda a: a / num_tests, changing_sums)
     print_results(tagged_results)
     if tagged_results[0] < untagged_results[0]:
-        print("GA is " + str((tagged_results[0] / untagged_results[0]) * 100) + " % more performant")
+        print("GA is " + str(((untagged_results[0] - tagged_results[0]) / untagged_results[0]) * 100) + " % more performant")
     else:
         print("Average performance of GA is not better")
     
